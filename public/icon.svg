@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- SignaalBrug brand mark: two arcs meeting = a bridge of signals -->
+  <rect width="512" height="512" rx="96" fill="#16321f"/>
+  <path d="M96 360 A 160 160 0 0 1 416 360" fill="none" stroke="#ffffff" stroke-width="40" stroke-linecap="round"/>
+  <path d="M152 360 A 104 104 0 0 1 360 360" fill="none" stroke="#7fc99a" stroke-width="40" stroke-linecap="round"/>
+  <circle cx="96" cy="360" r="28" fill="#ffffff"/>
+  <circle cx="416" cy="360" r="28" fill="#ffffff"/>
+</svg>

@@ -1,0 +1,14 @@
+{
+  "name": "SignaalBrug — Refugee Help Case Console",
+  "short_name": "SignaalBrug",
+  "description": "Six intake channels, one case console. Demo for RefugeeHelp / VluchtelingenWerk NL.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#16321f",
+  "theme_color": "#16321f",
+  "orientation": "any",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
