@@ -2,7 +2,7 @@
 import React, { useState, useRef } from "react";
 import { SBStore, AI, fb, getSiteConfig, createCase, fmt } from "../lib/store";
 import {
-  useDb, Icon, Brand, Avatar, Field, SegControl, ChannelBadge, UrgencyChip, AssigneeChip,
+  useDb, Icon, Brand, Avatar, Field, SegControl, ChannelBadge, UrgencyChip, AssigneeChip, CaseDateChip,
   HelpBanner, EmptyState, toast, CHANNELS, SITUATIONS, CATEGORIES, LANGS,
 } from "../components/index.jsx";
 
@@ -23,6 +23,7 @@ export function StaffShell({ route, nav, children, title, actions }) {
   const me = myUser(db, session);
   const isAdmin = session && session.role === "admin";
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const unreadMine = db.cases.filter((c) => c.assignedTo === (me && me.id) && c.unread && c.status !== "resolved").length;
   const pendingCount = visibleCasesFor(db, session).filter((c) => c.status === "pending").length;
   const showAnalytics = isAdmin || getSiteConfig(db).volunteerAnalytics;
@@ -83,16 +84,36 @@ export function StaffShell({ route, nav, children, title, actions }) {
       </div>
 
       <nav className="bottom-nav" aria-label="Staff navigation">
-        {NAV.slice(0, 5).map((n) => (
-          <button key={n.to} className={isOn(n.to) ? "on" : ""} onClick={() => nav(n.to)}>
+        {NAV.slice(0, 4).map((n) => (
+          <button key={n.to} className={isOn(n.to) ? "on" : ""} onClick={() => { setMoreOpen(false); nav(n.to); }}>
             <Icon name={n.icon} size={19} />
             {n.label.split(" ")[0]}
+            {n.pip ? <span className="pip">{n.pip}</span> : null}
           </button>
         ))}
-        {showAnalytics ? (
-          <button className={route === "/staff/analytics" ? "on" : ""} onClick={() => nav("/staff/analytics")}><Icon name="chart" size={19} />Stats</button>
-        ) : null}
+        <button className={moreOpen || NAV.slice(4).some((n) => isOn(n.to)) ? "on" : ""} onClick={() => setMoreOpen((v) => !v)} aria-expanded={moreOpen}>
+          <Icon name="dots" size={19} />
+          More
+        </button>
       </nav>
+
+      {moreOpen ? (
+        <div className="more-sheet-wrap" onClick={() => setMoreOpen(false)}>
+          <div className="more-sheet" onClick={(e) => e.stopPropagation()} role="menu" aria-label="More navigation">
+            <div className="more-grab"></div>
+            {NAV.slice(4).map((n) => (
+              <button key={n.to} className={"more-link" + (isOn(n.to) ? " on" : "")} onClick={() => { setMoreOpen(false); nav(n.to); }}>
+                <Icon name={n.icon} size={18} />
+                {n.label}
+                {n.pip ? <span className="pip">{n.pip}</span> : null}
+              </button>
+            ))}
+            <div className="more-sep"></div>
+            <button className="more-link" onClick={() => { setMoreOpen(false); setSettingsOpen(true); }}><Icon name="settings" size={18} />Settings</button>
+            <button className="more-link" onClick={() => { SBStore.session.set(null); nav("/"); }}><Icon name="home" size={18} />Home</button>
+          </div>
+        </div>
+      ) : null}
 
       {settingsOpen ? <SettingsDrawer onClose={() => setSettingsOpen(false)} /> : null}
     </div>
@@ -167,9 +188,9 @@ export function AddEntryScreen({ nav }) {
   return (
     <StaffShell route="/staff/add" nav={nav} title="Add New Entry">
       <div className="col" style={{ gap: 16 }}>
-        <HelpBanner id="add">Log anything that comes in outside the portal — a walk-in at a consultation point, a phone call, a forwarded email or a voice note. Everything lands in the same inbox and triage board.</HelpBanner>
+        <HelpBanner id="add">Log anything that comes in outside the portal — a live-interaction at the shelter point, a phone call, an email or points discussed during a meeting. Everything lands in the same inbox and triage board.</HelpBanner>
         <SegControl value={mode} onChange={setMode} options={[
-          { value: "manual", label: "Walk-in / Phone" }, { value: "email", label: "Paste an email" }, { value: "voice", label: "Voice note" },
+          { value: "manual", label: "Live-Interaction" }, { value: "email", label: "Paste an email" }, { value: "voice", label: "Voice note" },
         ]} />
         {mode === "manual" ? <ManualEntryForm nav={nav} me={me} /> : mode === "email" ? <EmailEntryForm nav={nav} me={me} /> : <VoiceEntryForm nav={nav} me={me} />}
       </div>
@@ -185,8 +206,8 @@ function StaffCaseFields({ f, set, errs }) {
   return (
     <React.Fragment>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        <Field label="Full name" required error={errs.name}>
-          <input className={"input" + (errs.name ? " invalid" : "")} value={f.name || ""} onChange={(e) => set("name", e.target.value)} />
+        <Field label="Full name" hint="Optional — blank is logged as 'Undisclosed'" error={errs.name}>
+          <input className={"input" + (errs.name ? " invalid" : "")} placeholder="Undisclosed" value={f.name || ""} onChange={(e) => set("name", e.target.value)} />
         </Field>
         <Field label="Phone or email" error={errs.contact} hint="At least one if follow-up is needed">
           <input className="input" value={f.contact || ""} onChange={(e) => set("contact", e.target.value)} placeholder="+31 6 … or name@…" />
@@ -221,17 +242,24 @@ function submitStaffCase(f, me, nav, channel) {
   const isEmail = (f.contact || "").includes("@");
   const kase = createCase({
     channel: channel || f.channel,
-    requester: { name: f.name.trim(), contactMethod: isEmail ? "email" : f.contact ? "phone" : "in_person", phone: !isEmail ? f.contact : null, email: isEmail ? f.contact : null, municipality: f.municipality, consent: true },
+    requester: { name: (f.name || "").trim() || "Undisclosed", contactMethod: isEmail ? "email" : f.contact ? "phone" : "in_person", phone: !isEmail ? f.contact : null, email: isEmail ? f.contact : null, municipality: f.municipality, consent: true },
     language: f.language, situation: f.situation, category: f.category,
     originalText: f.description.trim(), selfReportedUrgent: f.urgent, audioUrl: f.audioUrl,
   }, me ? me.name : "Staff");
+  if (!(f.name || "").trim()) {
+    // Anonymous intake: append the case number so the record stays traceable
+    SBStore.update((d) => {
+      const c = d.cases.find((x) => x.id === kase.id);
+      if (c) c.requester.name = "Undisclosed (" + kase.code + ")";
+    });
+  }
   toast("Case " + kase.code + " created — landed in the Inbox");
   nav("/staff/case/" + kase.id);
 }
 
 function validateStaffCase(f) {
   const errs = {};
-  if (!f.name || f.name.trim().length < 2) errs.name = "Name is required.";
+  if (f.name && f.name.trim().length === 1) errs.name = "Enter at least 2 characters, or leave blank.";
   if (!f.category) errs.category = "Pick a topic.";
   if (!f.description || f.description.trim().length < 20) errs.description = "At least 20 characters.";
   return errs;
@@ -253,12 +281,14 @@ function ManualEntryForm({ nav, me }) {
             { value: "walkin", label: "Walk-in" }, { value: "callback", label: "Phone call" },
           ]} />
         </Field>
-        <Field label="Logged by">
-          <span className="chip chip-lg" style={{ background: "var(--n-50)" }}>{me ? me.name : "Staff"}</span>
-        </Field>
         <Field label="Emergency?">
           <SegControl value={!!f.urgent} onChange={(v) => set("urgent", v)} options={[{ value: false, label: "No" }, { value: true, label: "Yes" }]} />
         </Field>
+        <div style={{ marginLeft: "auto" }}>
+          <Field label="Logged by">
+            <span className="chip chip-lg" style={{ background: "var(--n-50)" }}>{me ? me.name : "Staff"}</span>
+          </Field>
+        </div>
       </div>
       <StaffCaseFields f={f} set={set} errs={errs} />
       <button className="btn btn-primary btn-lg" type="submit" style={{ alignSelf: "flex-start" }}>Create case</button>
@@ -414,7 +444,7 @@ export function InboxScreen({ nav }) {
               </div>
               <UrgencyChip urgency={c.urgency} />
               <AssigneeChip kase={c} volunteers={db.volunteers} />
-              <span className="hint" style={{ flex: "none", width: 64, textAlign: "right" }}>{fmt.timeAgo(c.timestamps.created)}</span>
+              <CaseDateChip kase={c} />
             </div>
           ))}
         </div>

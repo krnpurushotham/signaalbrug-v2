@@ -98,6 +98,8 @@ export function Icon({ name, size = 18 }) {
     sparkle: <g {...s}><path d="M12 4l1.8 5.4L19 11l-5.2 1.6L12 18l-1.8-5.4L5 11l5.2-1.6z" /></g>,
     qr: <g {...s}><rect x="4" y="4" width="6.5" height="6.5" rx="1" /><rect x="13.5" y="4" width="6.5" height="6.5" rx="1" /><rect x="4" y="13.5" width="6.5" height="6.5" rx="1" /><line x1="14" y1="14" x2="14" y2="20" /><line x1="17" y1="14" x2="20" y2="14" /><line x1="17" y1="17" x2="20" y2="20" /></g>,
     doc: <g {...s}><rect x="5" y="3.5" width="14" height="17" rx="2.5" /><line x1="8.5" y1="9" x2="15.5" y2="9" /><line x1="8.5" y1="13" x2="15.5" y2="13" /><line x1="8.5" y1="17" x2="12.5" y2="17" /></g>,
+    dots: <g {...s}><circle cx="5" cy="12" r="1.3" /><circle cx="12" cy="12" r="1.3" /><circle cx="19" cy="12" r="1.3" /></g>,
+    home: <g {...s}><path d="M4 11l8-7 8 7" /><path d="M6 9.5V20h12V9.5" /></g>,
   };
   return <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">{paths[name] || null}</svg>;
 }
@@ -125,6 +127,18 @@ export function AssigneeChip({ kase, volunteers }) {
   return (
     <span className="chip" style={{ background: "var(--n-50)", paddingLeft: 4 }}>
       <Avatar vol={v} size={19} /> {v.name}
+    </span>
+  );
+}
+
+export function CaseDateChip({ kase }) {
+  const info = fmt.caseDate(kase);
+  if (!info.iso) return null;
+  return (
+    <span className={"chip" + (info.est ? " chip-blue" : "")} style={{ height: 22, fontSize: 11.5, whiteSpace: "nowrap", flex: "none" }}
+      title={info.est ? "Estimated from average resolution time of " + info.basis : info.label + " " + fmt.dt(info.iso)}>
+      <Icon name="calendar" size={12} />
+      {info.label} {info.est ? "~" : ""}{fmt.d(info.iso)}
     </span>
   );
 }

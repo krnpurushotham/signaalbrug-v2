@@ -186,14 +186,14 @@ export function makeSeed() {
   ];
 
   const locations = [
-    { id: "l1", name: "Application centre Ter Apel", type: "application_centre", lat: 52.8767, lng: 7.0589, situations: ["asylum_seeker"], note: "National centre where the asylum procedure starts." },
-    { id: "l2", name: "COA reception centre Budel", type: "reception", lat: 51.27, lng: 5.575, situations: ["asylum_seeker"], note: "Sample COA reception location." },
-    { id: "l3", name: "COA reception centre Utrecht", type: "reception", lat: 52.0907, lng: 5.1214, situations: ["asylum_seeker"], note: "Sample COA reception location." },
-    { id: "l4", name: "Municipal reception Amsterdam (Ukraine)", type: "municipal", lat: 52.3702, lng: 4.8952, situations: ["ukraine"], note: "Sample municipal reception for people who fled Ukraine." },
-    { id: "l5", name: "Municipal reception Rotterdam (Ukraine)", type: "municipal", lat: 51.9244, lng: 4.4777, situations: ["ukraine"], note: "Sample municipal reception for people who fled Ukraine." },
-    { id: "l6", name: "VWN consultation point Den Haag", type: "vwn_consultation", lat: 52.0705, lng: 4.3007, situations: ["asylum_seeker", "ukraine", "status_holder", "helper"], note: "Walk-in and digital consultation hours." },
-    { id: "l7", name: "VWN consultation point Eindhoven", type: "vwn_consultation", lat: 51.4416, lng: 5.4697, situations: ["asylum_seeker", "ukraine", "status_holder", "helper"], note: "Walk-in and digital consultation hours." },
-    { id: "l8", name: "RefugeeHomeNL info point Groningen", type: "municipal", lat: 53.2194, lng: 6.5665, situations: ["ukraine", "helper"], note: "Host-family matching and information." },
+    { id: "l1", name: "Application centre Ter Apel", type: "application_centre", lat: 52.8767, lng: 7.0589, situations: ["asylum_seeker"], requests: 34, note: "National centre where the asylum procedure starts." },
+    { id: "l2", name: "COA reception centre Budel", type: "reception", lat: 51.27, lng: 5.575, situations: ["asylum_seeker"], requests: 12, note: "Sample COA reception location." },
+    { id: "l3", name: "COA reception centre Utrecht", type: "reception", lat: 52.0907, lng: 5.1214, situations: ["asylum_seeker"], requests: 9, note: "Sample COA reception location." },
+    { id: "l4", name: "Municipal reception Amsterdam (Ukraine)", type: "municipal", lat: 52.3702, lng: 4.8952, situations: ["ukraine"], requests: 17, note: "Sample municipal reception for people who fled Ukraine." },
+    { id: "l5", name: "Municipal reception Rotterdam (Ukraine)", type: "municipal", lat: 51.9244, lng: 4.4777, situations: ["ukraine"], requests: 14, note: "Sample municipal reception for people who fled Ukraine." },
+    { id: "l6", name: "VWN consultation point Den Haag", type: "vwn_consultation", lat: 52.0705, lng: 4.3007, situations: ["asylum_seeker", "ukraine", "status_holder", "helper"], requests: 21, note: "Walk-in and digital consultation hours." },
+    { id: "l7", name: "VWN consultation point Eindhoven", type: "vwn_consultation", lat: 51.4416, lng: 5.4697, situations: ["asylum_seeker", "ukraine", "status_holder", "helper"], requests: 8, note: "Walk-in and digital consultation hours." },
+    { id: "l8", name: "RefugeeHomeNL info point Groningen", type: "municipal", lat: 53.2194, lng: 6.5665, situations: ["ukraine", "helper"], requests: 6, note: "Host-family matching and information." },
   ];
 
   const searchLog = [

@@ -298,6 +298,35 @@ export const fmt = {
     if (s < 86400) return Math.round(s / 3600) + "h ago";
     return Math.round(s / 86400) + "d ago";
   },
+  d(iso) {
+    if (!iso) return "—";
+    return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  },
+  /* Which date matters for this case right now:
+     unassigned → created · assigned & pending → assigned · in progress → due date
+     (user-set, else derived from avg resolution velocity of same-category cases) · resolved → resolved */
+  caseDate(kase) {
+    const t = kase.timestamps || {};
+    if (kase.status === "resolved") return { label: "Resolved", iso: t.resolved, est: false };
+    if (kase.status === "in_progress") {
+      if (kase.due) return { label: "Target", iso: kase.due, est: false };
+      const done = (db.cases || []).filter((c) => c.timestamps && c.timestamps.resolved);
+      const sameCat = done.filter((c) => c.category === kase.category);
+      const pool = sameCat.length ? sameCat : done;
+      let avg = 3 * 864e5; // fallback: 3 days
+      if (pool.length) {
+        avg = pool.reduce((s, c) => s + Math.max(0, new Date(c.timestamps.resolved) - new Date(c.timestamps.assigned || c.timestamps.created)), 0) / pool.length;
+        avg = Math.max(avg, 12 * 36e5); // never estimate under 12h
+      }
+      const start = new Date(t.assigned || t.created).getTime();
+      return {
+        label: "Est. completion", iso: new Date(start + avg).toISOString(), est: true,
+        basis: sameCat.length ? cap(kase.category || "similar") + " cases (" + sameCat.length + " resolved)" : "all resolved cases",
+      };
+    }
+    if (kase.assignedTo) return { label: "Assigned", iso: t.assigned || t.created, est: false };
+    return { label: "Created", iso: t.created, est: false };
+  },
   dt(iso) {
     if (!iso) return "—";
     return new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });

@@ -7,7 +7,7 @@ import {
 } from "../lib/store";
 import {
   useDb, useMedia, Icon, Avatar, Field, SegControl, Modal, ChannelBadge, UrgencyChip,
-  AssigneeChip, HelpBanner, EmptyState, QRBox, Timeline, toast,
+  AssigneeChip, CaseDateChip, HelpBanner, EmptyState, QRBox, Timeline, toast,
   SITUATIONS, LANGS, STATUS_META,
 } from "../components/index.jsx";
 import { StaffShell, myUser, visibleCasesFor } from "./Staff.jsx";
@@ -97,6 +97,7 @@ function CaseCard({ kase, db, nav, draggable, onDragStart }) {
       <div className="row-wrap" style={{ gap: 5 }}>
         {(kase.tags || []).slice(0, 2).map((t) => <span key={t} className="chip" style={{ height: 22, fontSize: 11.5 }}>{t}</span>)}
         {kase.duplicateOf ? <span className="chip chip-amber" style={{ height: 22, fontSize: 11.5 }}><Icon name="merge" size={12} /> dup?</span> : null}
+        <CaseDateChip kase={kase} />
         <span style={{ marginLeft: "auto" }}><AssigneeChip kase={kase} volunteers={db.volunteers} /></span>
       </div>
     </div>
@@ -425,6 +426,23 @@ export function CaseDetail({ nav, caseId }) {
                   {STATUS_META[s].label}
                 </button>
               ))}
+              {kase.status === "in_progress" ? (
+                <div className="col" style={{ gap: 6, paddingTop: 10, marginTop: 4, borderTop: "1px solid var(--n-100)" }}>
+                  <strong style={{ fontSize: 13 }}>Tentative completion</strong>
+                  <input type="date" className="input" value={kase.due || ""}
+                    onChange={(e) => SBStore.update((d) => { const c = d.cases.find((x) => x.id === caseId); if (c) c.due = e.target.value || null; })} />
+                  {!kase.due ? (
+                    <span className="hint" style={{ fontSize: 12 }}>
+                      No date set — estimating <strong>{fmt.d(fmt.caseDate(kase).iso)}</strong> from the average resolution time of {fmt.caseDate(kase).basis}.
+                    </span>
+                  ) : (
+                    <button className="btn btn-ghost btn-sm" style={{ alignSelf: "flex-start" }}
+                      onClick={() => SBStore.update((d) => { const c = d.cases.find((x) => x.id === caseId); if (c) c.due = null; })}>
+                      Clear — use velocity estimate
+                    </button>
+                  )}
+                </div>
+              ) : null}
             </div>
             <div className="card" style={{ padding: 16 }}>
               <strong style={{ fontSize: 14 }}>Activity</strong>
@@ -446,6 +464,49 @@ export function CaseDetail({ nav, caseId }) {
         </Modal>
       ) : null}
     </StaffShell>
+  );
+}
+
+/* ---------- Admin capacity & workload overview ---------- */
+const VOL_CAPACITY = 5; // open cases an available volunteer can carry
+function CapacityOverview({ db, vols }) {
+  const open = db.cases.filter((c) => c.status !== "resolved");
+  const unassigned = open.filter((c) => !c.assignedTo).length;
+  const availVols = vols.filter((v) => v.available);
+  const totalCap = availVols.length * VOL_CAPACITY;
+  const pct = totalCap ? Math.round((open.length / totalCap) * 100) : 0;
+  return (
+    <div className="card col rev" style={{ padding: 18, gap: 14 }}>
+      <div className="spread">
+        <strong style={{ fontSize: 15 }}>Capacity &amp; workload</strong>
+        <span className="hint">capacity = {VOL_CAPACITY} open cases per available volunteer</span>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 10 }}>
+        <div className="kpi well"><span className="v">{open.length}</span><span className="l">Open cases</span></div>
+        <div className="kpi well"><span className="v" style={{ color: unassigned ? "var(--amber-700)" : "inherit" }}>{unassigned}</span><span className="l">Unassigned</span></div>
+        <div className="kpi well"><span className="v">{availVols.length}<span style={{ fontSize: 18, color: "var(--ink-3)" }}>/{vols.length}</span></span><span className="l">Volunteers available</span></div>
+        <div className="kpi well"><span className="v" style={{ color: pct >= 100 ? "var(--red-600, #c0392b)" : pct >= 75 ? "var(--amber-700)" : "var(--green-700)" }}>{pct}%</span><span className="l">Capacity used</span></div>
+      </div>
+      <div className="col" style={{ gap: 8 }}>
+        {vols.map((v) => {
+          const n = db.cases.filter((c) => c.assignedTo === v.id && c.status !== "resolved").length;
+          const fill = Math.min(100, (n / VOL_CAPACITY) * 100);
+          const color = !v.available ? "var(--n-200)" : n >= VOL_CAPACITY ? "var(--red-600, #c0392b)" : n >= VOL_CAPACITY * 0.75 ? "var(--amber-700)" : v.color;
+          return (
+            <div key={v.id} className="row" style={{ gap: 10 }}>
+              <Avatar vol={v} size={26} />
+              <span style={{ fontSize: 13.5, fontWeight: 600, width: 90, flex: "none", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", opacity: v.available ? 1 : 0.55 }}>{v.name}</span>
+              <div className="grow" style={{ height: 10, borderRadius: 999, background: "var(--n-100)", overflow: "hidden" }} role="img" aria-label={v.name + ": " + n + " of " + VOL_CAPACITY + " cases"}>
+                <div style={{ width: fill + "%", height: "100%", borderRadius: 999, background: color, transition: "width .3s" }}></div>
+              </div>
+              <span className="hint" style={{ width: 70, flex: "none", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+                {n}/{VOL_CAPACITY}{!v.available ? " · away" : n >= VOL_CAPACITY ? " · full" : ""}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -481,6 +542,7 @@ export function QueueScreen({ nav }) {
                   <span className="code" style={{ fontSize: 13, flex: "none" }}>{c.code}</span>
                   <ChannelBadge channel={c.channel} />
                   <span className="grow" style={{ fontWeight: 600, fontSize: 14.5, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.requester.name} · <span style={{ fontWeight: 450, color: "var(--ink-3)" }}>{(c.translatedText || c.originalText).slice(0, 70)}…</span></span>
+                  <CaseDateChip kase={c} />
                   <UrgencyChip urgency={c.urgency} />
                 </div>
               ))}
@@ -499,6 +561,7 @@ export function QueueScreen({ nav }) {
                     <span className="grow" style={{ fontSize: 14, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.requester.name} · <span style={{ color: "var(--ink-3)" }}>{(c.translatedText || c.originalText).slice(0, 56)}…</span></span>
                     {skillFit ? <span className="chip chip-green" style={{ height: 22, fontSize: 11.5 }}>skill fit</span> : null}
                     {langFit && c.language !== "en" ? <span className="chip chip-blue" style={{ height: 22, fontSize: 11.5 }}>{c.language.toUpperCase()}</span> : null}
+                    <CaseDateChip kase={c} />
                     <UrgencyChip urgency={c.urgency} />
                     {allowSelfAssign ? (
                       <button className="btn btn-secondary btn-sm" style={{ flex: "none" }} onClick={(e) => { e.stopPropagation(); pickUp(c); }}>Assign to me</button>
@@ -532,6 +595,7 @@ export function QueueScreen({ nav }) {
     <StaffShell route="/staff/queue" nav={nav} title="Assignments">
       <div className="col" style={{ gap: 14 }}>
         <HelpBanner id="assignments">Workload per volunteer at a glance. Toggle availability to take someone out of the suggestion ranking — it never blocks manual assignment.</HelpBanner>
+        <CapacityOverview db={db} vols={vols} />
         {unassigned.length ? (
           <div className="card" style={{ padding: 16 }}>
             <div className="row-wrap" style={{ marginBottom: 10 }}>
@@ -544,6 +608,7 @@ export function QueueScreen({ nav }) {
                   <span className="code" style={{ fontSize: 13, flex: "none" }}>{c.code}</span>
                   <ChannelBadge channel={c.channel} />
                   <span className="grow" style={{ fontSize: 14, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.requester.name} · {(c.translatedText || c.originalText).slice(0, 60)}…</span>
+                  <CaseDateChip kase={c} />
                   <UrgencyChip urgency={c.urgency} />
                 </div>
               ))}
@@ -570,6 +635,7 @@ export function QueueScreen({ nav }) {
                   <div key={c.id} className="well row" style={{ padding: "9px 12px", gap: 8, cursor: "pointer" }} onClick={() => nav("/staff/case/" + c.id)}>
                     <span className="code" style={{ fontSize: 12 }}>{c.code}</span>
                     <span className="grow" style={{ fontSize: 13, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{(c.translatedText || c.originalText).slice(0, 44)}…</span>
+                    <CaseDateChip kase={c} />
                     <UrgencyChip urgency={c.urgency} />
                   </div>
                 ))}
